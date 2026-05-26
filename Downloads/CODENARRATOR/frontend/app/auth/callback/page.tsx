@@ -1,8 +1,9 @@
 "use client";
-import { useEffect } from "react";
+import { Suspense, useEffect } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 
-export default function AuthCallback() {
+// Inner component — useSearchParams must be inside Suspense for prod builds
+function CallbackHandler() {
   const router = useRouter();
   const params = useSearchParams();
 
@@ -18,6 +19,10 @@ export default function AuthCallback() {
     router.replace("/");
   }, [params, router]);
 
+  return null;
+}
+
+export default function AuthCallback() {
   return (
     <main style={{ minHeight:"100vh", display:"flex", alignItems:"center", justifyContent:"center",
       background:"#07070f", color:"#a5b4fc", fontSize:16, fontFamily:"sans-serif" }}>
@@ -25,6 +30,9 @@ export default function AuthCallback() {
         <div style={{ fontSize:32, marginBottom:12 }}>⏳</div>
         <p>Completing GitHub login…</p>
       </div>
+      <Suspense fallback={null}>
+        <CallbackHandler />
+      </Suspense>
     </main>
   );
 }
