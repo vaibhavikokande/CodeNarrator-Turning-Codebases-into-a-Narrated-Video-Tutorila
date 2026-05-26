@@ -1,0 +1,22 @@
+# Secrets — NEVER commit these
+.env
+llm_cache.json
+
+# Generated output (large video files)
+output/
+
+# Python
+__pycache__/
+*.pyc
+*.pyo
+.venv/
+venv/
+env/
+*.egg-info/
+dist/
+build/
+
+# Temp files
+_avatar_tmp/
+_pptx_frames/
+test.mp3

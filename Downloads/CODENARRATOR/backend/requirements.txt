@@ -1,0 +1,30 @@
+# ── Web Framework ─────────────────────────────────────────────────────────────
+fastapi
+uvicorn[standard]
+pydantic
+websockets
+python-dotenv
+
+# ── AI / LLM ──────────────────────────────────────────────────────────────────
+anthropic>=0.40.0          # Anthropic Claude (primary LLM provider)
+google-genai               # Google Gemini (fallback)
+httpx                      # HTTP client (OpenRouter + ElevenLabs)
+
+# ── Repository Fetching ───────────────────────────────────────────────────────
+aiofiles
+
+# ── Video & Audio Pipeline ────────────────────────────────────────────────────
+edge-tts                   # Microsoft neural TTS (free fallback)
+moviepy                    # Video clip assembly
+imageio[ffmpeg]            # FFmpeg binary for imageio
+Pillow                     # Image generation for slides
+Pygments                   # Syntax highlighting in slides
+mutagen                    # Audio duration detection
+
+# ── Tutorial Export ───────────────────────────────────────────────────────────
+markdown                   # Markdown → HTML for PDF export
+# weasyprint               # HTML → PDF (optional; install separately if needed)
+python-pptx                # PowerPoint export (Feature 4)
+
+# ── Data / Parsing ────────────────────────────────────────────────────────────
+PyYAML

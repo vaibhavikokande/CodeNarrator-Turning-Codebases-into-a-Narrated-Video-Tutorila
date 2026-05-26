@@ -1,0 +1,320 @@
+/**
+ * responsive.css — Mobile & Tablet breakpoints (ADDITIVE, standalone).
+ *
+ * Strategy:
+ *   • Uses CSS !important to override inline styles on structural elements
+ *   • Targets semantic HTML (nav, main, aside) and known class names
+ *   • Never restructures component logic — CSS-only changes
+ *   • Desktop (1024px+) layout is 100% preserved — these rules only activate below 1024px
+ *
+ * Breakpoints:
+ *   Mobile  : max-width 767px  (375px phones)
+ *   Tablet  : 768px – 1023px
+ *   Desktop : 1024px+          (unchanged)
+ */
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   TABLET  768px – 1023px
+═══════════════════════════════════════════════════════════════════════════ */
+@media (max-width: 1023px) {
+
+  /* ── Navbar: tighten spacing ── */
+  nav {
+    padding: 12px 18px !important;
+    gap: 6px !important;
+  }
+
+  /* ── Homepage: narrower padding ── */
+  main {
+    padding-left: 24px !important;
+    padding-right: 24px !important;
+  }
+
+  /* ── TutorialViewer: slightly narrower sidebar ── */
+  aside {
+    width: 220px !important;
+    min-width: 220px !important;
+  }
+}
+
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   MOBILE  max-width 767px  (covers 375px, 390px, 414px phones)
+═══════════════════════════════════════════════════════════════════════════ */
+@media (max-width: 767px) {
+
+  /* ───────────────────────────────────────────────────────────────────────
+     NAV BAR
+  ─────────────────────────────────────────────────────────────────────── */
+  nav {
+    padding: 10px 14px !important;
+    flex-wrap: wrap !important;
+    gap: 6px !important;
+    position: sticky !important;
+    top: 0 !important;
+    z-index: 50 !important;
+  }
+
+  /* Brand text — keep, reduce size */
+  nav > div:first-child span {
+    font-size: 13px !important;
+  }
+
+  /* Nav links — reduce padding */
+  nav a {
+    padding: 5px 10px !important;
+    font-size: 11px !important;
+  }
+
+  /* Hide "History" / "Admin" text labels on tiny screens, show emoji only */
+  nav a[href="/history"] svg,
+  nav a[href="/admin"] svg { display: none; }
+
+
+  /* ───────────────────────────────────────────────────────────────────────
+     HOMEPAGE — Hero section
+  ─────────────────────────────────────────────────────────────────────── */
+  /* Main hero container */
+  main {
+    padding: 80px 16px 40px !important;
+    align-items: stretch !important;
+  }
+
+  /* Content wrapper max-width — full width on mobile */
+  main > div[style] {
+    max-width: 100% !important;
+    padding-top: 20px !important;
+  }
+
+  /* Hero title size */
+  main h1 {
+    font-size: clamp(2rem, 8vw, 2.8rem) !important;
+    margin-bottom: 14px !important;
+  }
+
+  /* Description text */
+  main > div > p {
+    font-size: 0.95rem !important;
+    max-width: 100% !important;
+    margin-bottom: 24px !important;
+  }
+
+  /* Feature pills — tighter gap */
+  main > div > div[style*="flex-wrap"] {
+    gap: 5px !important;
+    margin-bottom: 24px !important;
+  }
+
+  main > div > div[style*="flex-wrap"] span {
+    font-size: 11px !important;
+    padding: 4px 10px !important;
+  }
+
+  /* Form card — reduce padding */
+  main > div > div:last-of-type {
+    padding: 24px 18px !important;
+    border-radius: 16px !important;
+  }
+
+  /* RepoForm: Language / Theme grid → single column */
+  form div[style*="grid-template-columns"] {
+    grid-template-columns: 1fr !important;
+  }
+
+  /* RepoForm: URL input padding */
+  form div[style*="border-radius:12"] {
+    padding: 0 10px !important;
+  }
+
+  form input[placeholder*="github.com"] {
+    font-size: 13px !important;
+    padding: 11px 0 !important;
+  }
+
+  /* Submit button */
+  form button[type="submit"] {
+    padding: 13px 20px !important;
+    font-size: 14px !important;
+  }
+
+
+  /* ───────────────────────────────────────────────────────────────────────
+     TUTORIAL VIEWER — layout
+  ─────────────────────────────────────────────────────────────────────── */
+
+  /* Outer flex container: switch to column layout */
+  /* This div has style={{ display:"flex", height:"calc(100vh - 64px)" }} */
+  div[style*="calc(100vh - 64px)"] {
+    flex-direction: column !important;
+    height: auto !important;
+    min-height: 100dvh !important;
+    overflow: visible !important;
+  }
+
+  /* Sidebar: full width across top, compact height */
+  aside {
+    width: 100% !important;
+    max-height: 180px !important;
+    min-width: 0 !important;
+    border-right: none !important;
+    border-bottom: 1px solid var(--border) !important;
+    overflow-y: auto !important;
+    flex-shrink: 0 !important;
+  }
+
+  /* Sidebar chapter nav — horizontal scroll row on mobile */
+  aside nav {
+    display: flex !important;
+    flex-direction: row !important;
+    flex-wrap: nowrap !important;
+    overflow-x: auto !important;
+    padding: 6px !important;
+    gap: 6px !important;
+    scrollbar-width: none !important;
+  }
+
+  aside nav button {
+    flex-shrink: 0 !important;
+    min-width: 120px !important;
+    white-space: nowrap !important;
+  }
+
+  /* Main content area */
+  main[style*="background"] {
+    overflow-y: auto !important;
+    min-height: 60vh !important;
+    flex: 1 !important;
+  }
+
+  /* Toolbar — wrap and reduce padding */
+  main > div[style*="sticky"] {
+    padding: 8px 12px !important;
+    flex-wrap: wrap !important;
+    gap: 6px !important;
+  }
+
+  /* Toolbar right-side button group */
+  main > div[style*="sticky"] > div[style*="margin-left:auto"],
+  main > div[style*="sticky"] > div[style*="marginLeft:\"auto\""] {
+    margin-left: 0 !important;
+    flex-wrap: wrap !important;
+    gap: 5px !important;
+    width: 100% !important;
+    justify-content: flex-end !important;
+  }
+
+  /* Toolbar buttons — smaller */
+  main > div[style*="sticky"] a,
+  main > div[style*="sticky"] button {
+    padding: 5px 9px !important;
+    font-size: 11px !important;
+  }
+
+  /* Content column — full padding reduction */
+  main > div[style*="overflow"] > div[style*="max-width"],
+  main div[style*="maxWidth:860"] {
+    padding: 16px 14px 60px !important;
+    max-width: 100% !important;
+  }
+
+  /* Video section — full width, no negative margin tricks */
+  main div[style*="borderTop"] {
+    margin-left: 0 !important;
+    margin-right: 0 !important;
+  }
+
+  /* Video player controls row — wrap */
+  div[style*="display:\"flex\""][style*="gap:6"] {
+    flex-wrap: wrap !important;
+  }
+
+
+  /* ───────────────────────────────────────────────────────────────────────
+     MODALS (Quiz, Export) — full screen on mobile
+  ─────────────────────────────────────────────────────────────────────── */
+  div[style*="position:\"fixed\""][style*="inset"] {
+    padding: 12px !important;
+  }
+
+  /* Modal inner card */
+  div[style*="position:\"fixed\""][style*="inset"] > div {
+    max-height: 92dvh !important;
+    overflow-y: auto !important;
+    width: 100% !important;
+    max-width: 100% !important;
+    border-radius: 16px !important;
+  }
+
+
+  /* ───────────────────────────────────────────────────────────────────────
+     ADMIN & HISTORY pages — table overflow
+  ─────────────────────────────────────────────────────────────────────── */
+  table {
+    display: block !important;
+    overflow-x: auto !important;
+    -webkit-overflow-scrolling: touch !important;
+    white-space: nowrap !important;
+  }
+
+
+  /* ───────────────────────────────────────────────────────────────────────
+     GENERATE / STATUS page — progress tracker
+  ─────────────────────────────────────────────────────────────────────── */
+  /* Step row — allow wrapping */
+  div[style*="grid-template-columns"][style*="repeat"] {
+    grid-template-columns: repeat(3, 1fr) !important;
+    gap: 8px !important;
+  }
+
+
+  /* ───────────────────────────────────────────────────────────────────────
+     CHATBOT — stick to bottom, full width
+  ─────────────────────────────────────────────────────────────────────── */
+  div[style*="position:\"fixed\""][style*="bottom"][style*="right"] {
+    right: 12px !important;
+    bottom: 12px !important;
+  }
+
+
+  /* ───────────────────────────────────────────────────────────────────────
+     TYPOGRAPHY — global mobile text adjustments
+  ─────────────────────────────────────────────────────────────────────── */
+  .md h1 { font-size: 1.5rem  !important; }
+  .md h2 { font-size: 1.15rem !important; }
+  .md h3 { font-size: 1rem    !important; }
+  .md pre { font-size: 0.75rem !important; padding: 1rem !important; }
+
+  /* Prevent horizontal scroll from wide code blocks */
+  .md pre { max-width: calc(100vw - 32px) !important; }
+}
+
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   SMALL MOBILE  max-width 390px  (iPhone 14 / SE size)
+═══════════════════════════════════════════════════════════════════════════ */
+@media (max-width: 390px) {
+
+  nav {
+    padding: 8px 10px !important;
+  }
+
+  /* Hide History and Admin nav links completely — too crowded */
+  nav a[href="/history"],
+  nav a[href="/admin"] {
+    display: none !important;
+  }
+
+  main h1 {
+    font-size: clamp(1.75rem, 9vw, 2.2rem) !important;
+  }
+
+  main > div > div:last-of-type {
+    padding: 18px 14px !important;
+  }
+
+  /* Single-column button group in video player controls */
+  div[style*="display:\"flex\""][style*="gap:6"] button {
+    font-size: 11px !important;
+    padding: 4px 8px !important;
+  }
+}
