@@ -1,0 +1,59 @@
+services:
+  # ── Backend (FastAPI + FFmpeg) ─────────────────────────────────────────────
+  - type: web
+    name: codenarrator-backend
+    runtime: docker
+    rootDir: backend
+    dockerfilePath: Dockerfile
+    plan: free
+    disk:
+      name: output-storage
+      mountPath: /app/output
+      sizeGB: 1
+    envVars:
+      - key: LLM_PROVIDER
+        value: gemini
+      - key: OUTPUT_DIR
+        value: /app/output
+      - key: FAST_MAX_FILES
+        value: "220"
+      - key: FAST_TUTORIAL_MAX_FILES
+        value: "4"
+      - key: DEFAULT_LANGUAGE
+        value: English
+      - key: DEFAULT_THEME
+        value: dark
+      - key: DEFAULT_VOICE
+        value: en-US-AriaNeural
+      - key: TTS_PROVIDER
+        value: elevenlabs
+      # Secret keys — add these manually in Render dashboard
+      - key: GEMINI_API_KEY
+        sync: false
+      - key: ELEVENLABS_API_KEY
+        sync: false
+      - key: ELEVENLABS_VOICE_ID
+        sync: false
+      - key: GITHUB_TOKEN
+        sync: false
+      - key: DID_API_KEY
+        sync: false
+      - key: OPENROUTER_API_KEY
+        sync: false
+      - key: FRONTEND_URL
+        sync: false
+
+  # ── Frontend (Next.js) ────────────────────────────────────────────────────
+  - type: web
+    name: codenarrator-frontend
+    runtime: node
+    rootDir: frontend
+    buildCommand: npm install && npm run build
+    startCommand: npm start
+    plan: free
+    envVars:
+      - key: NODE_VERSION
+        value: "20"
+      # Set this to your backend URL after backend deploys
+      - key: NEXT_PUBLIC_API_URL
+        sync: false
