@@ -61,6 +61,23 @@ def _load_video_script(job_id: str) -> list:
         ),
     )
 
+
+def repo_name_slug(job_id: str, output_dir: Path) -> str:
+    """Derive a filename-safe slug from the repo name for PPTX download."""
+    import re as _re
+    try:
+        idx = output_dir / "index.md"
+        if idx.exists():
+            m = _re.search(r"^#\s+(.+)", idx.read_text(encoding="utf-8"), _re.MULTILINE)
+            if m:
+                slug = _re.sub(r"[^\w\s-]", "", m.group(1)).strip()
+                slug = _re.sub(r"[\s_]+", "_", slug)[:30].lower()
+                if slug:
+                    return slug
+    except Exception:
+        pass
+    return job_id[:8]
+
 logging.basicConfig(
     level=logging.INFO,
     format="%(asctime)s %(levelname)s %(name)s: %(message)s",
@@ -624,17 +641,17 @@ async def export_pptx(job_id: str):
     if not (output_dir / "visuals").exists():
         raise HTTPException(status_code=400, detail="visuals/ not found — run video generation first")
 
-    script = _load_video_script(job_id)
-
-    from nodes.export_pptx import export_to_pptx
-    result = await asyncio.to_thread(export_to_pptx, str(output_dir), script)
+    # Educational PPTX: reads from markdown chapters on disk, no video_script needed
+    from nodes.export_pptx import export_to_pptx_educational
+    result = await export_to_pptx_educational(str(output_dir))
 
     if result["success"]:
         pptx_path = Path(result["output_path"])
+        fname = f"{repo_name_slug(job_id, output_dir)}_tutorial.pptx"
         return Response(
             content=pptx_path.read_bytes(),
             media_type="application/vnd.openxmlformats-officedocument.presentationml.presentation",
-            headers={"Content-Disposition": f'attachment; filename="tutorial_{job_id[:8]}.pptx"'},
+            headers={"Content-Disposition": f'attachment; filename="{fname}"'},
         )
     raise HTTPException(status_code=500, detail=result.get("error", "PPTX export failed"))
 
