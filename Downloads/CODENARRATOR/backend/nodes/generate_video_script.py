@@ -16,7 +16,7 @@ from utils.yaml_validator import ValidationError, validate_video_script
 
 logger = logging.getLogger(__name__)
 
-_TARGET_SEGMENTS = 14   # was 20 — fewer clips = faster render, still complete tutorial
+_TARGET_SEGMENTS = 10   # was 14 — 10 segments covers a full tutorial; saves ~30% render time
 _MAX_SUMMARY_LEN = 600   # chars per chapter summary passed to LLM
 
 

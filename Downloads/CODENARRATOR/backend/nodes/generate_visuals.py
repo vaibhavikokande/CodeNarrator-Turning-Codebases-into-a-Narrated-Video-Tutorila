@@ -1,5 +1,5 @@
-"""
-generate_visuals.py — animated educational video clip renderer.
+﻿"""
+generate_visuals.py â€” animated educational video clip renderer.
 
 Each segment type is rendered as an animated MP4 clip (no audio) using
 MoviePy VideoClip + Pillow frame-by-frame rendering with pre-cached base layers.
@@ -30,10 +30,14 @@ from pipeline.pocketflow import AsyncNode
 
 logger = logging.getLogger(__name__)
 
-# ── Constants ────────────────────────────────────────────────────────────────
+# â”€â”€ Constants â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 W, H = 1920, 1080
-FPS  = 12   # 12 fps — 20% fewer frames than 15fps, imperceptible for slides
+FPS  = 8    # 8 fps â€” good enough for slide-style video, 33% faster than 12fps
 FONTS_DIR = Path(__file__).parent.parent / "assets" / "fonts"
+
+# Output resolution â€” render at full 1920Ã—1080 internally (so all layouts work),
+# then downscale to 720p at encode time. Encoding 720p is ~2.5x faster than 1080p.
+_OUT_W, _OUT_H = 1280, 720
 
 # GitHub Dark palette
 C_BG       = (13,  17,  23)
@@ -50,7 +54,7 @@ C_PURPLE   = (188, 140, 255)
 C_RED      = (248, 81,  73)
 C_BORDER   = (48,  54,  61)
 
-# ── Font loading ─────────────────────────────────────────────────────────────
+# â”€â”€ Font loading â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 _FC: Dict[tuple, ImageFont.FreeTypeFont] = {}
 
 def F(size: int, bold=False, italic=False, mono=False) -> ImageFont.FreeTypeFont:
@@ -80,7 +84,7 @@ def F(size: int, bold=False, italic=False, mono=False) -> ImageFont.FreeTypeFont
     _FC[k] = font
     return font
 
-# ── Animation math ────────────────────────────────────────────────────────────
+# â”€â”€ Animation math â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 def ease_out(t: float) -> float:
     return 1 - (1 - max(0, min(1, t))) ** 3
 
@@ -97,7 +101,7 @@ def progress(t: float, start: float, dur: float) -> float:
 def alpha_int(p: float) -> int:
     return int(255 * p)
 
-# ── Pillow helpers ────────────────────────────────────────────────────────────
+# â”€â”€ Pillow helpers â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 def grad_bg(colors: Tuple = (C_BG, C_BG2)) -> Image.Image:
     img  = Image.new("RGB", (W, H))
     draw = ImageDraw.Draw(img)
@@ -178,11 +182,11 @@ def draw_visualizer(img: Image.Image, t: float, y_base: int = H - 30) -> None:
         draw.rectangle([x0, y_base - h_bar, x0 + bw, y_base],
                        fill=(*C_ACCENT, min(alpha, 200)))
 
-# ── Segment renderers ─────────────────────────────────────────────────────────
+# â”€â”€ Segment renderers â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 class TitleRenderer:
-    """TYPE 1 — Title slide with fade + subtle zoom + spotlight."""
-    DUR = 5.0
+    """TYPE 1 â€” Title slide with fade + subtle zoom + spotlight."""
+    DUR = 3.0
 
     def __init__(self, data: dict):
         # display_content may be a plain string "Title\nTagline" or a dict
@@ -210,7 +214,7 @@ class TitleRenderer:
     def make_frame(self, t: float) -> np.ndarray:
         frame = self._base.copy()
 
-        # Title fade-in 0→1.5s
+        # Title fade-in 0â†’1.5s
         p_title = ease_out(progress(t, 0, 1.5))
         if p_title > 0:
             tf    = F(82, bold=True)
@@ -251,8 +255,8 @@ class TitleRenderer:
 
 
 class ChapterIntroRenderer:
-    """TYPE 2 — Left panel slides in; right side has code rain."""
-    DUR = 5.0
+    """TYPE 2 â€” Left panel slides in; right side has code rain."""
+    DUR = 3.0
 
     def __init__(self, data: dict):
         self.num     = str(data.get("chapter_number", "01")).zfill(2)
@@ -279,7 +283,7 @@ class ChapterIntroRenderer:
     def make_frame(self, t: float) -> np.ndarray:
         frame = self._base.copy().convert("RGBA")
 
-        # ── Right side: code rain ──
+        # â”€â”€ Right side: code rain â”€â”€
         rain_layer = Image.new("RGBA", (W, H), (0, 0, 0, 0))
         rd = ImageDraw.Draw(rain_layer)
         rf = F(15, mono=True)
@@ -295,7 +299,7 @@ class ChapterIntroRenderer:
         rain_blurred = rain_layer.filter(ImageFilter.GaussianBlur(radius=1))
         frame = Image.alpha_composite(frame, rain_blurred)
 
-        # ── Left panel: slides in from left ──
+        # â”€â”€ Left panel: slides in from left â”€â”€
         p_panel = ease_out(progress(t, 0.0, 0.8))
         panel_x = int(-W * 4 // 10 * (1 - p_panel))
         panel_w = W * 4 // 10
@@ -333,8 +337,8 @@ class ChapterIntroRenderer:
 
 
 class DefinitionRenderer:
-    """TYPE 3 — Top bar slides down; card fades in; bullets appear one-by-one."""
-    DUR = 7.0
+    """TYPE 3 â€” Top bar slides down; card fades in; bullets appear one-by-one."""
+    DUR = 3.0
 
     def __init__(self, data: dict):
         self.concept = data.get("concept", data.get("term", "Concept"))
@@ -347,7 +351,7 @@ class DefinitionRenderer:
         frame = self._base.copy()
         draw  = ImageDraw.Draw(frame)
 
-        # ── Top bar slides down 0–0.4s ──
+        # â”€â”€ Top bar slides down 0â€“0.4s â”€â”€
         p_bar = ease_out(progress(t, 0.0, 0.4))
         bar_h = 88
         bar_y = int(-bar_h + bar_h * p_bar)
@@ -357,7 +361,7 @@ class DefinitionRenderer:
             draw.text((40, bar_y + (bar_h - 34) // 2), self.concept[:60],
                       font=tf, fill=C_TEXT)
 
-        # ── Card fades in 0.5–1.0s ──
+        # â”€â”€ Card fades in 0.5â€“1.0s â”€â”€
         p_card = ease_in_out(progress(t, 0.5, 0.5))
         if p_card > 0:
             card_w, card_h = W - 160, 480
@@ -393,7 +397,7 @@ class DefinitionRenderer:
             draw.text((card_x + 36, div_y + 14), "KEY POINTS",
                       font=lf, fill=(*C_GREEN, alpha_int(p_card)))
 
-        # ── Bullet points: one every 1.2s starting at t=1.5 ──
+        # â”€â”€ Bullet points: one every 1.2s starting at t=1.5 â”€â”€
         bp_font = F(32)
         for i, point in enumerate(self.points):
             p_bullet = ease_out(progress(t, 1.5 + i * 1.2, 0.4))
@@ -409,7 +413,7 @@ class DefinitionRenderer:
                 frame = composite_rgba(frame, lay, (bx + 20, by))
                 draw  = ImageDraw.Draw(frame)
 
-        # ── Analogy box slides up from bottom at t=7.0 ──
+        # â”€â”€ Analogy box slides up from bottom at t=7.0 â”€â”€
         p_analogy = ease_out(progress(t, 4.5, 0.6))
         if p_analogy > 0 and self.analogy:
             box_h  = 100
@@ -429,11 +433,11 @@ class DefinitionRenderer:
 
 
 class CodeRenderer:
-    """TYPE 4 — Glassmorphism IDE card: code types in left panel with syntax
+    """TYPE 4 â€” Glassmorphism IDE card: code types in left panel with syntax
     colour hints; explanation bullets cascade in the right panel."""
-    DUR = 7.0
+    DUR = 3.0
 
-    # Simple keyword → colour map for a few common languages
+    # Simple keyword â†’ colour map for a few common languages
     _KW_COLORS = {
         "def": C_PURPLE, "class": C_PURPLE, "return": C_RED, "import": C_ACCENT,
         "from": C_ACCENT, "if": C_RED, "else": C_RED, "elif": C_RED,
@@ -487,7 +491,7 @@ class CodeRenderer:
     def make_frame(self, t: float) -> np.ndarray:
         frame = self._prebuild_bg()
 
-        # ── Code panel (glassmorphism card, left 55 %) ────────────────────────
+        # â”€â”€ Code panel (glassmorphism card, left 55 %) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
         p_card = ease_out(progress(t, 0.0, 0.4))
         card_w = int(W * 0.55)
         card_h = H - 80
@@ -506,7 +510,7 @@ class CodeRenderer:
         if p_hdr > 0:
             hbar = rounded_rect_rgba(card_w, 44, (*C_BG2, alpha_int(p_hdr)),
                                      radius=18)
-            # Only round top corners — overdraw bottom half
+            # Only round top corners â€” overdraw bottom half
             frame = composite_rgba(frame, hbar, (card_x, card_y))
             draw  = ImageDraw.Draw(frame)
             # Traffic-light dots
@@ -560,7 +564,7 @@ class CodeRenderer:
                                  (card_x + 58 + 10, cy_cur + lh - 4)],
                                 fill=(*C_ACCENT, 200))
 
-        # ── Right panel: explanation (glassmorphism) ───────────────────────────
+        # â”€â”€ Right panel: explanation (glassmorphism) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
         code_done_t = len(self.code_lines) * 0.14 + 0.6
         p_right = ease_out(progress(t, code_done_t, 0.7))
         if p_right > 0:
@@ -608,8 +612,8 @@ class CodeRenderer:
 
 
 class ArchitectureRenderer:
-    """TYPE 5 — Diagram fades in with zoom; manual fallback draws boxes."""
-    DUR = 6.0
+    """TYPE 5 â€” Diagram fades in with zoom; manual fallback draws boxes."""
+    DUR = 4.5
 
     def __init__(self, data: dict, diagram_img: Optional[Image.Image]):
         self.mermaid_src = data.get("mermaid_source", data.get("text", ""))
@@ -631,7 +635,7 @@ class ArchitectureRenderer:
             frame = composite_rgba(frame, lay, ((W - lay.width) // 2, 40))
             draw  = ImageDraw.Draw(frame)
 
-        # Diagram: zoom 0.95→1.0 and fade in starting at t=0.5
+        # Diagram: zoom 0.95â†’1.0 and fade in starting at t=0.5
         p_diag = ease_in_out(progress(t, 0.5, 0.8))
         if p_diag > 0 and self.diagram:
             zoom_scale = 0.95 + 0.05 * p_diag
@@ -675,8 +679,8 @@ class ArchitectureRenderer:
 
 
 class SummaryRenderer:
-    """TYPE 6 — Takeaways slide in from right; branding fades in last."""
-    DUR = 6.0
+    """TYPE 6 â€” Takeaways slide in from right; branding fades in last."""
+    DUR = 4.5
 
     def __init__(self, data: dict):
         self.heading    = data.get("heading", "Summary")
@@ -712,13 +716,13 @@ class SummaryRenderer:
                 num_layer = text_layer(f"{i+1}", F(32, bold=True), C_ACCENT, p_item)
                 frame = composite_rgba(frame, num_layer, (160 + x_off, 260 + i * 72))
                 # Text
-                txt_l = text_layer(textwrap.shorten(item, 68, placeholder='…'), tf, C_TEXT, p_item)
+                txt_l = text_layer(textwrap.shorten(item, 68, placeholder='â€¦'), tf, C_TEXT, p_item)
                 frame = composite_rgba(frame, txt_l, (210 + x_off, 262 + i * 72))
 
         # Next chapter hint
         p_next = ease_out(progress(t, len(self.takeaways) * 0.5 + 1.0, 0.5))
         if p_next > 0 and self.next_ch:
-            nl  = text_layer(f"Next → {self.next_ch}", F(32, italic=True), C_ACCENT, p_next)
+            nl  = text_layer(f"Next â†’ {self.next_ch}", F(32, italic=True), C_ACCENT, p_next)
             frame = composite_rgba(frame, nl, ((W - nl.width) // 2, H - 120))
 
         draw_visualizer(frame, t)
@@ -727,7 +731,7 @@ class SummaryRenderer:
 
 class SlideRenderer:
     """Generic slide: glassmorphism card + title + body with Ken Burns zoom."""
-    DUR = 5.0
+    DUR = 3.0
 
     # Accent colours cycle per slide instance (via hash of title)
     _ACCENTS = [C_ACCENT, C_GREEN, C_PURPLE, C_YELLOW]
@@ -744,7 +748,7 @@ class SlideRenderer:
         self._base  = self._prebuild()
 
     def _prebuild(self) -> Image.Image:
-        # Rich gradient: dark teal → deep purple
+        # Rich gradient: dark teal â†’ deep purple
         img  = grad_bg(((6, 8, 18), (20, 14, 42)))
         img  = spotlight(img, W * 2 // 3, H // 3, 500,
                          color=self.accent, intensity=18)
@@ -759,7 +763,7 @@ class SlideRenderer:
         return img
 
     def make_frame(self, t: float) -> np.ndarray:
-        # Ken Burns: slow zoom 1.0 → 1.03 over the full clip
+        # Ken Burns: slow zoom 1.0 â†’ 1.03 over the full clip
         zoom = 1.0 + 0.03 * ease_in_out(t / self.DUR)
         # Pan: gentle leftward drift
         dx   = int(W * (zoom - 1.0) * -0.4)
@@ -795,7 +799,7 @@ class SlideRenderer:
         if p_title > 0:
             y_off = int(16 * (1 - p_title))
             tf    = F(68, bold=True)
-            lay   = text_layer(textwrap.shorten(self.title, 48, placeholder='…'), tf, C_TEXT, p_title)
+            lay   = text_layer(textwrap.shorten(self.title, 48, placeholder='â€¦'), tf, C_TEXT, p_title)
             frame = composite_rgba(frame, lay, (200, 150 + y_off))
             draw  = ImageDraw.Draw(frame)
             # Underline sweeps in
@@ -821,17 +825,17 @@ class SlideRenderer:
 
 
 class BulletsRenderer:
-    """Bullets slide — two-column card layout with icon badges and stagger."""
-    DUR = 6.0
+    """Bullets slide â€” two-column card layout with icon badges and stagger."""
+    DUR = 4.5
 
-    _BULLET_ICONS = ["●", "◆", "▲", "★", "■", "◉"]
+    _BULLET_ICONS = ["â—", "â—†", "â–²", "â˜…", "â– ", "â—‰"]
     _BULLET_COLS  = [C_ACCENT, C_GREEN, C_PURPLE, C_YELLOW, C_RED, C_ACCENT2]
 
     def __init__(self, data: dict):
         if isinstance(data, str):
             lines       = data.strip().splitlines()
             self.title  = lines[0] if lines else ""
-            self.points = [l.lstrip("-•\xb7 ") for l in lines[1:] if l.strip()][:6]
+            self.points = [l.lstrip("-â€¢\xb7 ") for l in lines[1:] if l.strip()][:6]
         else:
             self.title  = data.get("title", data.get("text", ""))
             self.points = data.get("key_points", data.get("points", []))[:6]
@@ -862,7 +866,7 @@ class BulletsRenderer:
         p_title = ease_out(progress(t, 0.1, 0.5))
         if p_title > 0:
             tf  = F(62, bold=True)
-            lay = text_layer(textwrap.shorten(self.title, 54, placeholder='…'), tf, C_TEXT, p_title)
+            lay = text_layer(textwrap.shorten(self.title, 54, placeholder='â€¦'), tf, C_TEXT, p_title)
             frame = composite_rgba(frame, lay, (72, 22))
             draw  = ImageDraw.Draw(frame)
             uw = int(lay.width * ease_out(progress(t, 0.4, 0.35)))
@@ -911,7 +915,7 @@ class BulletsRenderer:
 
 class BrandedIntroRenderer:
     """YouTube-style branded intro: 6 s animated title card with particles."""
-    DUR = 4.0
+    DUR = 3.0
 
     def __init__(self, data: dict):
         self.title          = data.get("title", "Code Narrator")
@@ -959,7 +963,7 @@ class BrandedIntroRenderer:
                        fill=(*C_ACCENT2, a))
         frame = composite_rgba(frame, glow)
 
-        # Title fade-in 0.3 → 1.3 s
+        # Title fade-in 0.3 â†’ 1.3 s
         p_title = ease_out(progress(t, 0.3, 1.0))
         if p_title > 0:
             tf   = F(100, bold=True)
@@ -978,7 +982,7 @@ class BrandedIntroRenderer:
         # Chapter count subtitle
         p_sub = ease_out(progress(t, 1.0, 0.7))
         if p_sub > 0:
-            txt = (f"{self.chapter_count} Chapters · AI-Generated Tutorial"
+            txt = (f"{self.chapter_count} Chapters Â· AI-Generated Tutorial"
                    if self.chapter_count else "AI-Generated Tutorial")
             lay = text_layer(txt, F(36), C_ACCENT, p_sub)
             frame = composite_rgba(frame, lay, ((W - lay.width) // 2, H // 2 + 40))
@@ -1080,7 +1084,7 @@ class ChapterTransitionRenderer:
 
 class OutroRenderer:
     """10 s YouTube-style outro: chapter recap, GitHub CTA, star badge."""
-    DUR = 6.0
+    DUR = 4.5
 
     def __init__(self, data: dict):
         self.title    = data.get("title", "Code Narrator")
@@ -1119,7 +1123,7 @@ class OutroRenderer:
             if p_ch > 0:
                 col   = i % 2
                 row   = i // 2
-                # col0 at x=110, col1 at x=1010 — 900 px apart, no overlap
+                # col0 at x=110, col1 at x=1010 â€” 900 px apart, no overlap
                 cx    = 110 + col * 900
                 cy    = 255 + row * 72
 
@@ -1127,10 +1131,10 @@ class OutroRenderer:
                 ckd   = ImageDraw.Draw(ck)
                 ckd.ellipse([(cx, cy + 4), (cx + 26, cy + 30)],
                             fill=(*C_GREEN, alpha_int(p_ch)))
-                ckd.text((cx + 4, cy + 4), "✓", font=F(18, bold=True),
+                ckd.text((cx + 4, cy + 4), "âœ“", font=F(18, bold=True),
                          fill=(*C_BG, alpha_int(p_ch)))
                 frame = composite_rgba(frame, ck)
-                label = textwrap.shorten(ch, 32, placeholder="…")
+                label = textwrap.shorten(ch, 32, placeholder="â€¦")
                 lay   = text_layer(label, cf, C_TEXT, p_ch)
                 frame = composite_rgba(frame, lay, (cx + 34, cy))
 
@@ -1151,7 +1155,7 @@ class OutroRenderer:
         # "Star on GitHub" CTA
         p_cta = ease_out(progress(t, 5.5, 1.0))
         if p_cta > 0:
-            lay = text_layer("⭐  Star this repo on GitHub!", F(44, bold=True), C_YELLOW, p_cta)
+            lay = text_layer("â­  Star this repo on GitHub!", F(44, bold=True), C_YELLOW, p_cta)
             frame = composite_rgba(frame, lay, ((W - lay.width) // 2, H - 115))
 
         draw_visualizer(frame, t)
@@ -1167,10 +1171,12 @@ def render_clip_sync(renderer_cls, data: dict, out_path: str) -> None:
     dur      = renderer_cls.DUR
     clip     = VideoClip(renderer.make_frame, duration=dur)
     clip.write_videofile(out_path, fps=FPS, codec="libx264",
-                         preset="ultrafast", audio=False, logger=None)
+                         preset="ultrafast", audio=False, logger=None,
+                         ffmpeg_params=["-vf", f"scale={_OUT_W}:{_OUT_H}",
+                                        "-sws_flags", "fast_bilinear"])
 
 
-# ── Main node ────────────────────────────────────────────────────────────────
+# â”€â”€ Main node â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 def _parse_content(raw) -> dict:
     """Normalise display_content to dict regardless of LLM format."""
@@ -1225,15 +1231,18 @@ class GenerateVisuals(AsyncNode):
         out_dir.mkdir(parents=True, exist_ok=True)
 
         total = len(segments)
-        print(f"GenerateVisuals: {total} segments — rendering in parallel")
+        print(f"GenerateVisuals: {total} segments â€” rendering in parallel")
 
-        # ── Parallel rendering with CPU semaphore ─────────────────────────────
-        # Clips are fully independent — no reason to render them one-by-one.
-        # Semaphore limits concurrent renders to avoid out-of-memory on low-RAM
-        # machines (each 1920×1080 clip needs ~200 MB RAM while encoding).
-        import multiprocessing
-        cpu_count   = max(2, multiprocessing.cpu_count())
-        max_workers = min(cpu_count, 6)   # cap at 6 even on high-core machines
+        # â”€â”€ Parallel rendering with CPU semaphore â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+        # Clips are fully independent â€” no reason to render them one-by-one.
+        # On cloud/low-CPU machines (e.g. Render free tier with 0.1 shared CPU),
+        # too many concurrent renders cause thrashing. Cap workers conservatively.
+        import multiprocessing, os as _os
+        cpu_count   = multiprocessing.cpu_count()
+        # On Render/cloud free tier, cpu_count is host CPUs but we only get a slice.
+        # Check for explicit env override, else use conservative default for cloud.
+        _cloud = bool(_os.environ.get("RENDER") or _os.environ.get("RAILWAY_ENVIRONMENT"))
+        max_workers = int(_os.environ.get("RENDER_MAX_WORKERS", 2 if _cloud else min(cpu_count, 4)))
         sem         = asyncio.Semaphore(max_workers)
         done        = [0]
 
@@ -1252,9 +1261,11 @@ class GenerateVisuals(AsyncNode):
                         str(out_path), fps=FPS,
                         codec="libx264", preset="ultrafast",
                         audio=False, logger=None,
+                        ffmpeg_params=["-vf", f"scale={_OUT_W}:{_OUT_H}",
+                                       "-sws_flags", "fast_bilinear"],
                     )
                 except Exception as exc:
-                    logger.warning("Segment %d failed (%s): %s — black frame", i, seg_type, exc)
+                    logger.warning("Segment %d failed (%s): %s â€” black frame", i, seg_type, exc)
                     await asyncio.to_thread(self._write_black_clip, str(out_path))
 
             done[0] += 1
@@ -1268,7 +1279,7 @@ class GenerateVisuals(AsyncNode):
 
         # Preserve original ordering (gather returns results in submission order)
         paths = list(results)
-        print(f"GenerateVisuals: all {total} clips rendered ✓")
+        print(f"GenerateVisuals: all {total} clips rendered âœ“")
         return paths
 
     async def _make_renderer(self, seg_type: str, data: dict):
@@ -1297,10 +1308,13 @@ class GenerateVisuals(AsyncNode):
         from moviepy import VideoClip
         import numpy as np
         W_, H_ = 1920, 1080
-        black = VideoClip(lambda t: np.zeros((H_, W_, 3), dtype=np.uint8), duration=6.0)
+        black = VideoClip(lambda t: np.zeros((H_, W_, 3), dtype=np.uint8), duration=4.5)
         black.write_videofile(path, fps=FPS, codec="libx264",
-                              preset="ultrafast", audio=False, logger=None)
+                              preset="ultrafast", audio=False, logger=None,
+                              ffmpeg_params=["-vf", f"scale={_OUT_W}:{_OUT_H}",
+                                             "-sws_flags", "fast_bilinear"])
 
     async def post(self, shared: dict, prep_result, exec_result) -> str:
         shared["visual_paths"] = exec_result
         return "default"
+
