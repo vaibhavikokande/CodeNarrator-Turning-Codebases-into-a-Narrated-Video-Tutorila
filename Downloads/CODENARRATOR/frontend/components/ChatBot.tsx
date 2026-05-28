@@ -38,7 +38,16 @@ export default function ChatBot({ jobId, contextFile }: Props) {
       const r = await api.chat(jobId, text, contextFile ?? undefined);
       setMsgs(p => [...p, { role:"bot", text: r.reply }]);
     } catch (e: any) {
-      setMsgs(p => [...p, { role:"bot", text:`⚠️ Error: ${e.message}` }]);
+      const raw = e.message ?? "";
+      let friendly = `⚠️ ${raw}`;
+      if (raw.includes("not found") || raw.includes("404")) {
+        friendly = "⚠️ This tutorial was not found on the server. It may have been generated on a different machine or the server restarted. Please regenerate the tutorial from the home page.";
+      } else if (raw.includes("500") || raw.includes("failed")) {
+        friendly = "⚠️ The AI assistant hit an error. Please try again in a moment.";
+      } else if (raw.includes("fetch") || raw.includes("network")) {
+        friendly = "⚠️ Cannot reach the backend. Make sure the server is running.";
+      }
+      setMsgs(p => [...p, { role:"bot", text: friendly }]);
     }
     setLoading(false);
   };

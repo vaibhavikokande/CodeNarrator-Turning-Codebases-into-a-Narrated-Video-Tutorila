@@ -375,10 +375,15 @@ async def admin_list_jobs():
 
 @app.get("/api/admin/disk-jobs")
 async def admin_disk_jobs():
+    import re as _re
+    _UUID_RE = _re.compile(r'^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$', _re.IGNORECASE)
     jobs_out = []
     if _OUTPUT_BASE.exists():
         for d in sorted(_OUTPUT_BASE.iterdir(), key=lambda p: p.stat().st_mtime, reverse=True):
             if not d.is_dir():
+                continue
+            # Only include real job directories (UUID-named) — skip any accidental file-named dirs
+            if not _UUID_RE.match(d.name):
                 continue
             md_files = list(d.glob("*.md"))
             has_video = (d / "tutorial.mp4").exists()

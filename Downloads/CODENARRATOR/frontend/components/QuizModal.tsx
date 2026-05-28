@@ -1,32 +1,54 @@
 "use client";
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { api, QuizQuestion } from "@/lib/api";
 
 interface Props { jobId: string; chapter: string; onClose: () => void }
 
 export default function QuizModal({ jobId, chapter, onClose }: Props) {
   const [questions, setQuestions] = useState<QuizQuestion[]>([]);
-  const [loading,   setLoading]   = useState(false);
+  const [loading,   setLoading]   = useState(true);  // auto-start
   const [error,     setError]     = useState("");
   const [current,   setCurrent]   = useState(0);
   const [selected,  setSelected]  = useState<number|null>(null);
   const [answered,  setAnswered]  = useState(false);
   const [score,     setScore]     = useState(0);
   const [done,      setDone]      = useState(false);
+  const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const chapterLabel = chapter.replace(/^\d+_/, "").replace(/\.md$/, "").replace(/_/g, " ")
     .replace(/\b\w/g, c => c.toUpperCase());
 
   const start = async () => {
     setLoading(true); setError("");
+    setQuestions([]); setCurrent(0); setScore(0); setSelected(null); setAnswered(false); setDone(false);
+
+    // 90-second timeout
+    timerRef.current = setTimeout(() => {
+      setLoading(false);
+      setError("Quiz generation timed out. The AI is busy — please retry.");
+    }, 90_000);
+
     try {
       const res = await api.getQuiz(jobId, chapter);
+      if (timerRef.current) clearTimeout(timerRef.current);
       setQuestions(res.questions);
-      setCurrent(0); setScore(0); setSelected(null); setAnswered(false); setDone(false);
     } catch (e: any) {
-      setError(e.message ?? "Failed to generate quiz");
-    } finally { setLoading(false); }
+      if (timerRef.current) clearTimeout(timerRef.current);
+      const msg = e.message ?? "Failed to generate quiz";
+      if (msg.includes("Chapter not found")) {
+        setError("Chapter file not found on server. The tutorial may have been generated on a different server — please regenerate it.");
+      } else if (msg.includes("Job") && msg.includes("not found")) {
+        setError("Tutorial not found on server. Please regenerate it from the home page.");
+      } else {
+        setError(msg);
+      }
+    } finally {
+      setLoading(false);
+    }
   };
+
+  // Auto-start on mount
+  useEffect(() => { start(); return () => { if (timerRef.current) clearTimeout(timerRef.current); }; }, []);
 
   const pick = (idx: number) => {
     if (answered) return;
@@ -58,18 +80,13 @@ export default function QuizModal({ jobId, chapter, onClose }: Props) {
             fontSize:20, cursor:"pointer", lineHeight:1, padding:"2px 6px" }}>✕</button>
         </div>
 
-        {/* Idle state */}
-        {questions.length === 0 && !loading && !error && (
+        {/* Idle state — only shown briefly before auto-start fires */}
+        {questions.length === 0 && !loading && !error && !done && (
           <div style={{ textAlign:"center", padding:"24px 0" }}>
-            <div style={{ fontSize:48, marginBottom:16 }}>🧠</div>
-            <p style={{ color:"#94a3b8", marginBottom:24, lineHeight:1.6 }}>
-              Generate 5 multiple-choice questions based on this chapter to test your understanding.
+            <div style={{ fontSize:48, marginBottom:12 }}>🧠</div>
+            <p style={{ color:"#94a3b8", marginBottom:20, lineHeight:1.6 }}>
+              Generating quiz questions for this chapter...
             </p>
-            <button onClick={start} style={{ background:"linear-gradient(135deg,#6366f1,#8b5cf6)",
-              color:"#fff", border:"none", borderRadius:10, padding:"12px 28px",
-              fontSize:15, fontWeight:600, cursor:"pointer" }}>
-              Generate Quiz
-            </button>
           </div>
         )}
 
