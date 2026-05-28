@@ -109,6 +109,150 @@ function label(f: string) {
 }
 function num(f: string) { const m = f.match(/^(\d+)_/); return m ? m[1] : null; }
 
+// ── Video Tutorials sidebar section ──────────────────────────────────────────
+function VideoTutorialsSection({
+  jobId, videoUrl, onScrollToVideo,
+}: { jobId: string; videoUrl: string | null; onScrollToVideo: () => void }) {
+  const [shorts, setShorts] = React.useState<{filename:string;title?:string;duration?:number;download_url:string}[]>([]);
+  const [loadingShorts, setLoadingShorts] = React.useState(false);
+  const [expanded, setExpanded] = React.useState(false);
+
+  // Load existing shorts if any
+  React.useEffect(() => {
+    if (!videoUrl) return;
+    fetch(`${BASE_URL}/api/jobs/${jobId}/shorts`)
+      .then(r => r.json())
+      .then(d => { if (d.clips) setShorts(d.clips); })
+      .catch(() => {});
+  }, [jobId, videoUrl]);
+
+  const generateShorts = async () => {
+    setLoadingShorts(true);
+    try {
+      const r = await fetch(`${BASE_URL}/api/jobs/${jobId}/shorts`, { method: "POST" });
+      const d = await r.json();
+      if (d.clips) setShorts(d.clips);
+    } catch {}
+    setLoadingShorts(false);
+  };
+
+  const itemStyle = (active = false): React.CSSProperties => ({
+    width: "100%", display: "flex", alignItems: "center", gap: 8,
+    padding: "8px 10px", borderRadius: 8, border: "1px solid transparent",
+    background: active ? "#6366f115" : "transparent",
+    borderColor: active ? "#6366f130" : "transparent",
+    cursor: "pointer", textAlign: "left", marginBottom: 2,
+    transition: "all .15s",
+    opacity: 1,
+  });
+
+  return (
+    <div style={{ borderTop: "1px solid #141428", paddingTop: 8 }}>
+      {/* Section header */}
+      <div style={{ padding: "6px 14px 4px", display: "flex", alignItems: "center",
+        justifyContent: "space-between" }}>
+        <p style={{ fontSize: 10, fontWeight: 700, letterSpacing: "0.12em",
+          color: "#3d4a5c", textTransform: "uppercase", margin: 0 }}>
+          Video Tutorials
+        </p>
+        {shorts.length > 0 && (
+          <button onClick={() => setExpanded(e => !e)} style={{
+            background: "none", border: "none", color: "#3d4a5c",
+            cursor: "pointer", fontSize: 10, padding: "2px 4px",
+          }}>
+            {expanded ? "▲" : "▼"}
+          </button>
+        )}
+      </div>
+
+      <div style={{ padding: "4px 8px" }}>
+        {/* Full tutorial video */}
+        {videoUrl ? (
+          <button onClick={onScrollToVideo} style={itemStyle()} title="Watch full tutorial video"
+            onMouseEnter={e => { e.currentTarget.style.background = "#ffffff06"; }}
+            onMouseLeave={e => { e.currentTarget.style.background = "transparent"; }}>
+            <div style={{
+              width: 26, height: 26, borderRadius: 7, flexShrink: 0,
+              display: "flex", alignItems: "center", justifyContent: "center",
+              background: "#141428", fontSize: 13,
+            }}>🎬</div>
+            <div style={{ flex: 1, overflow: "hidden" }}>
+              <span style={{ fontSize: 12, fontWeight: 500, color: "#94a3b8",
+                overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap",
+                display: "block" }}>
+                Full Tutorial
+              </span>
+              <span style={{ fontSize: 10, color: "#3d4a5c" }}>Click to play</span>
+            </div>
+            <span style={{ fontSize: 9, padding: "2px 6px", borderRadius: 99,
+              background: "#22c55e18", color: "#4ade80",
+              border: "1px solid #22c55e30", flexShrink: 0 }}>
+              Ready
+            </span>
+          </button>
+        ) : (
+          <div style={{ ...itemStyle(), opacity: 0.4, cursor: "default" }}>
+            <div style={{ width: 26, height: 26, borderRadius: 7, flexShrink: 0,
+              display: "flex", alignItems: "center", justifyContent: "center",
+              background: "#141428", fontSize: 13 }}>🎬</div>
+            <div style={{ flex: 1 }}>
+              <span style={{ fontSize: 12, fontWeight: 500, color: "#475569",
+                display: "block" }}>Full Tutorial</span>
+              <span style={{ fontSize: 10, color: "#3d4a5c" }}>Generating...</span>
+            </div>
+          </div>
+        )}
+
+        {/* Chapter shorts */}
+        {shorts.length > 0 && expanded && shorts.map((clip, i) => (
+          <a key={i} href={`${BASE_URL}${clip.download_url}`}
+            download={clip.filename}
+            style={{ ...itemStyle(), textDecoration: "none" }}
+            onMouseEnter={e => { e.currentTarget.style.background = "#ffffff06"; }}
+            onMouseLeave={e => { e.currentTarget.style.background = "transparent"; }}>
+            <div style={{ width: 26, height: 26, borderRadius: 7, flexShrink: 0,
+              display: "flex", alignItems: "center", justifyContent: "center",
+              background: "#141428", color: "#6366f1", fontSize: 10, fontWeight: 800 }}>
+              {i + 1}
+            </div>
+            <div style={{ flex: 1, overflow: "hidden" }}>
+              <span style={{ fontSize: 12, fontWeight: 500, color: "#94a3b8",
+                overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap",
+                display: "block" }}>
+                {clip.title ?? `Clip ${i + 1}`}
+              </span>
+              {clip.duration && (
+                <span style={{ fontSize: 10, color: "#3d4a5c" }}>{clip.duration}s</span>
+              )}
+            </div>
+            <span style={{ fontSize: 10, color: "#475569", flexShrink: 0 }}>⬇</span>
+          </a>
+        ))}
+
+        {/* Generate shorts CTA */}
+        {videoUrl && shorts.length === 0 && (
+          <button onClick={generateShorts} disabled={loadingShorts}
+            style={{ ...itemStyle(), justifyContent: "center", opacity: loadingShorts ? 0.6 : 1 }}
+            onMouseEnter={e => { if (!loadingShorts) e.currentTarget.style.background = "#ffffff06"; }}
+            onMouseLeave={e => { e.currentTarget.style.background = "transparent"; }}>
+            <span style={{ fontSize: 11, color: "#475569" }}>
+              {loadingShorts ? "Cutting clips..." : "✂ Cut into chapter clips"}
+            </span>
+          </button>
+        )}
+
+        {/* No video yet hint */}
+        {!videoUrl && (
+          <p style={{ fontSize: 10, color: "#2d3748", padding: "4px 8px",
+            lineHeight: 1.5, margin: 0 }}>
+            Video will appear here once generation completes.
+          </p>
+        )}
+      </div>
+    </div>
+  );
+}
+
 export default function TutorialViewer({ jobId }: Props) {
   const [arts,    setArts]    = useState<ArtifactsResponse>({ markdown_files:[], video_url:null });
   const [sel,     setSel]     = useState<string|null>(null);
@@ -116,6 +260,7 @@ export default function TutorialViewer({ jobId }: Props) {
   const [loading, setLoading] = useState(false);
   const [done,    setDone]    = useState(false);
   const [sidebar, setSidebar] = useState(true);
+  const videoRef  = useRef<HTMLDivElement>(null);
 
   // Search
   const [searchQ,      setSearchQ]      = useState("");
@@ -129,6 +274,10 @@ export default function TutorialViewer({ jobId }: Props) {
   const [showQuiz,     setShowQuiz]     = useState(false);
   const [showExport,   setShowExport]   = useState(false);
   const [showSettings, setShowSettings] = useState(false);
+
+  const scrollToVideo = useCallback(() => {
+    videoRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
+  }, []);
 
   const loadArts = useCallback(async () => {
     try {
@@ -260,6 +409,13 @@ export default function TutorialViewer({ jobId }: Props) {
             );
           })}
         </nav>
+
+        {/* Video Tutorials section */}
+        <VideoTutorialsSection
+          jobId={jobId}
+          videoUrl={arts.video_url}
+          onScrollToVideo={scrollToVideo}
+        />
       </aside>
 
       {/* Main */}
@@ -407,7 +563,7 @@ export default function TutorialViewer({ jobId }: Props) {
           )}
 
           {arts.video_url && (
-            <div style={{ marginTop:48, paddingTop:32, borderTop:"1px solid #141428" }}>
+            <div ref={videoRef} style={{ marginTop:48, paddingTop:32, borderTop:"1px solid #141428" }}>
               <h2 style={{ fontSize:18, fontWeight:700, color:"#e2e8f0", marginBottom:16, display:"flex", alignItems:"center", gap:8 }}>
                 🎬 Video Walkthrough
               </h2>

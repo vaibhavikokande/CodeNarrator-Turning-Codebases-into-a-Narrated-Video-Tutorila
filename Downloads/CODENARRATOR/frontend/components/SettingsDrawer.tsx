@@ -45,10 +45,72 @@ const downloadLink: React.CSSProperties = {
 };
 
 // ── Feature 1: Avatar ──────────────────────────────────────────────────────
+
+const AVATAR_POSITIONS = [
+  { value: "bottomright", label: "Bottom Right", icon: "↘" },
+  { value: "bottomleft",  label: "Bottom Left",  icon: "↙" },
+  { value: "topright",    label: "Top Right",     icon: "↗" },
+  { value: "topleft",     label: "Top Left",      icon: "↖" },
+];
+
+const AVATAR_STYLES = [
+  { value: "professional", label: "Professional", desc: "Formal attire, neutral backdrop" },
+  { value: "casual",       label: "Casual",       desc: "Relaxed look, conversational tone" },
+  { value: "educator",     label: "Educator",     desc: "Teaching pose, classroom feel" },
+];
+
+const AVATAR_VOICES = [
+  { value: "auto",   label: "Auto (match language)" },
+  { value: "male",   label: "Male voice" },
+  { value: "female", label: "Female voice" },
+];
+
+function AvatarPreview({ position }: { position: string }) {
+  const spots: Record<string, React.CSSProperties> = {
+    bottomright: { bottom: 4, right: 4 },
+    bottomleft:  { bottom: 4, left: 4 },
+    topright:    { top: 4, right: 4 },
+    topleft:     { top: 4, left: 4 },
+  };
+  return (
+    <div style={{
+      position: "relative", width: "100%", height: 80, borderRadius: 8,
+      background: "#08080f", border: "1px solid #252540",
+      marginBottom: 10, overflow: "hidden",
+    }}>
+      {/* Fake video content */}
+      <div style={{ position: "absolute", inset: 0, display: "flex", alignItems: "center",
+        justifyContent: "center", gap: 6 }}>
+        <div style={{ width: 40, height: 6, borderRadius: 3, background: "#1a1a30" }} />
+        <div style={{ width: 24, height: 6, borderRadius: 3, background: "#1a1a30" }} />
+        <div style={{ width: 32, height: 6, borderRadius: 3, background: "#1a1a30" }} />
+      </div>
+      {/* Avatar circle indicator */}
+      <div style={{
+        position: "absolute", width: 28, height: 28, borderRadius: "50%",
+        background: "linear-gradient(135deg,#6366f1,#8b5cf6)",
+        border: "2px solid #a5b4fc",
+        display: "flex", alignItems: "center", justifyContent: "center",
+        fontSize: 14,
+        ...spots[position],
+      }}>
+        🤖
+      </div>
+      <div style={{ position: "absolute", bottom: 4, left: 0, right: 0,
+        textAlign: "center", fontSize: 9, color: "#3d4a5c" }}>
+        preview — avatar position
+      </div>
+    </div>
+  );
+}
+
 function AvatarSection({ jobId }: { jobId: string }) {
   const [apiKey,   setApiKey]   = useState("");
   const [provider, setProvider] = useState<"did"|"heygen">("did");
   const [position, setPosition] = useState("bottomright");
+  const [style,    setStyle]    = useState("professional");
+  const [voice,    setVoice]    = useState("auto");
+  const [showKey,  setShowKey]  = useState(false);
   const [status,   setStatus]   = useState<"idle"|"loading"|"done"|"error">("idle");
   const [url,      setUrl]      = useState("");
   const [err,      setErr]      = useState("");
@@ -60,7 +122,7 @@ function AvatarSection({ jobId }: { jobId: string }) {
       const r = await fetch(`${BASE_URL}/api/jobs/${jobId}/avatar`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ provider, api_key: apiKey, position }),
+        body: JSON.stringify({ provider, api_key: apiKey, position, style, voice }),
       });
       const d = await r.json();
       if (d.success) { setStatus("done"); setUrl(`${BASE_URL}${d.download_url}`); }
@@ -71,33 +133,120 @@ function AvatarSection({ jobId }: { jobId: string }) {
   return (
     <div>
       <p style={sectionTitle}>🤖 Talking Avatar</p>
-      <div style={{ display:"flex", gap:6, marginBottom:8 }}>
+
+      {/* What is this */}
+      <div style={{ background:"#0a0a1a", border:"1px solid #1a1a30", borderRadius:8,
+        padding:"10px 12px", marginBottom:12 }}>
+        <p style={{ fontSize:11, color:"#64748b", margin:0, lineHeight:1.6 }}>
+          Adds a <strong style={{ color:"#a5b4fc" }}>virtual AI presenter</strong> overlay in the
+          corner of your video. The avatar reads the tutorial content aloud while
+          the slides play — great for a more engaging, human-feeling tutorial.
+        </p>
+      </div>
+
+      {/* Provider selector */}
+      <p style={{ fontSize:10, color:"#3d4a5c", fontWeight:700, letterSpacing:"0.1em",
+        textTransform:"uppercase", marginBottom:6 }}>Service Provider</p>
+      <div style={{ display:"flex", gap:6, marginBottom:10 }}>
         {(["did","heygen"] as const).map(p => (
           <button key={p} onClick={() => setProvider(p)} style={{
-            ...actionBtn(provider===p), flex:1, justifyContent:"center",
-          }}>{p === "did" ? "D-ID" : "HeyGen"}</button>
+            ...actionBtn(provider===p), flex:1, justifyContent:"center", flexDirection:"column" as const,
+            padding:"8px 10px", gap:2,
+          }}>
+            <span style={{ fontSize:12, fontWeight:700 }}>{p === "did" ? "D-ID" : "HeyGen"}</span>
+            <span style={{ fontSize:9, opacity:0.7 }}>
+              {p === "did" ? "Free tier available" : "Higher quality"}
+            </span>
+          </button>
         ))}
       </div>
-      <input
-        type="password" value={apiKey} onChange={e => setApiKey(e.target.value)}
-        placeholder={`${provider === "did" ? "D-ID" : "HeyGen"} API key`}
-        style={{ width:"100%", padding:"8px 12px", borderRadius:8, marginBottom:6,
-          background:"#08080f", border:"1px solid #252540", color:"#e2e8f0",
-          fontSize:12, outline:"none", boxSizing:"border-box" as const }}
-      />
-      <select value={position} onChange={e => setPosition(e.target.value)} style={{
-        width:"100%", padding:"8px 12px", borderRadius:8, marginBottom:8,
-        background:"#08080f", border:"1px solid #252540", color:"#94a3b8",
-        fontSize:12, outline:"none", boxSizing:"border-box" as const,
-      }}>
-        {["bottomright","bottomleft","topright","topleft"].map(p => (
-          <option key={p} value={p}>{p}</option>
+
+      {/* API Key */}
+      <p style={{ fontSize:10, color:"#3d4a5c", fontWeight:700, letterSpacing:"0.1em",
+        textTransform:"uppercase", marginBottom:6 }}>
+        {provider === "did" ? "D-ID" : "HeyGen"} API Key
+        <a href={provider === "did"
+            ? "https://studio.d-id.com/account-settings"
+            : "https://app.heygen.com/settings?nav=API"
+          } target="_blank" rel="noopener noreferrer"
+          style={{ marginLeft:6, fontSize:9, color:"#6366f1", textDecoration:"none" }}>
+          Get key ↗
+        </a>
+      </p>
+      <div style={{ position:"relative", marginBottom:10 }}>
+        <input
+          type={showKey ? "text" : "password"} value={apiKey}
+          onChange={e => setApiKey(e.target.value)}
+          placeholder={`Paste your ${provider === "did" ? "D-ID" : "HeyGen"} API key`}
+          style={{ width:"100%", padding:"8px 36px 8px 12px", borderRadius:8,
+            background:"#08080f", border:`1px solid ${apiKey ? "#6366f140" : "#252540"}`,
+            color:"#e2e8f0", fontSize:12, outline:"none", boxSizing:"border-box" as const }}
+        />
+        <button onClick={() => setShowKey(s => !s)} style={{
+          position:"absolute", right:8, top:"50%", transform:"translateY(-50%)",
+          background:"none", border:"none", color:"#475569", cursor:"pointer", fontSize:12 }}>
+          {showKey ? "🙈" : "👁"}
+        </button>
+      </div>
+
+      {/* Avatar style */}
+      <p style={{ fontSize:10, color:"#3d4a5c", fontWeight:700, letterSpacing:"0.1em",
+        textTransform:"uppercase", marginBottom:6 }}>Avatar Style</p>
+      <div style={{ display:"flex", flexDirection:"column" as const, gap:4, marginBottom:10 }}>
+        {AVATAR_STYLES.map(s => (
+          <button key={s.value} onClick={() => setStyle(s.value)} style={{
+            ...actionBtn(style===s.value), justifyContent:"flex-start", gap:8,
+          }}>
+            <span style={{ fontSize:12, fontWeight:600, flex:1, textAlign:"left" }}>{s.label}</span>
+            <span style={{ fontSize:10, opacity:0.6 }}>{s.desc}</span>
+          </button>
         ))}
-      </select>
+      </div>
+
+      {/* Voice */}
+      <p style={{ fontSize:10, color:"#3d4a5c", fontWeight:700, letterSpacing:"0.1em",
+        textTransform:"uppercase", marginBottom:6 }}>Narrator Voice</p>
+      <div style={{ display:"flex", gap:6, marginBottom:10 }}>
+        {AVATAR_VOICES.map(v => (
+          <button key={v.value} onClick={() => setVoice(v.value)} style={{
+            ...actionBtn(voice===v.value), flex:1, justifyContent:"center", fontSize:10,
+            padding:"7px 6px",
+          }}>{v.label}</button>
+        ))}
+      </div>
+
+      {/* Position picker with live preview */}
+      <p style={{ fontSize:10, color:"#3d4a5c", fontWeight:700, letterSpacing:"0.1em",
+        textTransform:"uppercase", marginBottom:6 }}>Avatar Position</p>
+      <AvatarPreview position={position} />
+      <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:4, marginBottom:12 }}>
+        {AVATAR_POSITIONS.map(p => (
+          <button key={p.value} onClick={() => setPosition(p.value)} style={{
+            ...actionBtn(position===p.value), justifyContent:"center", gap:5,
+            padding:"7px 8px",
+          }}>
+            <span>{p.icon}</span>
+            <span style={{ fontSize:10 }}>{p.label}</span>
+          </button>
+        ))}
+      </div>
+
       {status === "done"
-        ? <a href={url} download="tutorial_with_avatar.mp4" style={downloadLink}>⬇ Download avatar video</a>
-        : <button onClick={run} disabled={status==="loading"} style={actionBtn(false)}>
-            {status==="loading" ? "⏳ Generating (2–5 min)…" : "✨ Generate & Overlay"}
+        ? <>
+            <div style={{ ...statusPill(true), display:"inline-block", marginBottom:8 }}>
+              Avatar video ready
+            </div>
+            <a href={url} download="tutorial_with_avatar.mp4" style={{ ...downloadLink, display:"flex" }}>
+              Download video with avatar
+            </a>
+          </>
+        : <button onClick={run} disabled={status==="loading" || !apiKey.trim()} style={{
+            ...actionBtn(!apiKey.trim() ? false : true),
+            width:"100%", justifyContent:"center",
+            opacity: !apiKey.trim() ? 0.5 : 1,
+            cursor: !apiKey.trim() ? "not-allowed" : "pointer",
+          }}>
+            {status==="loading" ? "Generating (2-5 min)..." : "Generate Avatar Video"}
           </button>
       }
       {err && <p style={{ fontSize:11, color:"#f87171", marginTop:6 }}>⚠ {err}</p>}
