@@ -567,7 +567,7 @@ export default function TutorialViewer({ jobId }: Props) {
               <h2 style={{ fontSize:18, fontWeight:700, color:"#e2e8f0", marginBottom:16, display:"flex", alignItems:"center", gap:8 }}>
                 🎬 Video Walkthrough
               </h2>
-              <VideoPlayer src={arts.video_url} />
+              <VideoPlayer src={`${BASE_URL}${arts.video_url}`} />
               <p style={{ fontSize:11, color:"#3d4a5c", marginTop:10, textAlign:"center" }}>
                 Use <strong style={{ color:"#6366f1" }}>⚙️ Features</strong> in the toolbar to add Avatar, Zoom, Shorts &amp; more
               </p>
