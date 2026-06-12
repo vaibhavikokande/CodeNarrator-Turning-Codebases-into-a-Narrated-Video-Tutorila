@@ -14,7 +14,7 @@ httpx                      # HTTP client (OpenRouter + ElevenLabs)
 aiofiles
 
 # ── Video & Audio Pipeline ────────────────────────────────────────────────────
-edge-tts                   # Microsoft neural TTS (free fallback)
+edge-tts==7.2.8            # Microsoft neural TTS (free fallback) — pinned: CLI args (--write-media) changed across versions
 moviepy                    # Video clip assembly
 imageio[ffmpeg]            # FFmpeg binary for imageio
 Pillow                     # Image generation for slides
