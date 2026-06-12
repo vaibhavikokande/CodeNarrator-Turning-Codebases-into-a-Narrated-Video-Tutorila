@@ -15,7 +15,6 @@ import logging
 import os
 import re
 import subprocess
-import sys
 import wave
 from pathlib import Path
 from typing import Any, List
@@ -133,22 +132,20 @@ def _elevenlabs_tts(text: str, out_path: Path, voice_id: str) -> bool:
         return False
 
 
-def _edge_tts_cli(text: str, out_path: Path, voice: str) -> bool:
-    cmd = [
-        sys.executable, "-m", "edge_tts",
-        "--voice", voice, "--rate", _RATE,
-        "--text", text, "--write-media", str(out_path),
-    ]
+async def _edge_tts_api(text: str, out_path: Path, voice: str) -> bool:
+    """Generate TTS via the edge-tts Python API directly (avoids CLI arg
+    compatibility issues across edge-tts versions/environments)."""
     try:
-        r = subprocess.run(cmd, capture_output=True, timeout=60)
-        if r.returncode == 0 and out_path.exists() and out_path.stat().st_size > 200:
+        import edge_tts
+        communicate = edge_tts.Communicate(text, voice, rate=_RATE)
+        await asyncio.wait_for(communicate.save(str(out_path)), timeout=60)
+        if out_path.exists() and out_path.stat().st_size > 200:
             return True
-        err = r.stderr.decode("utf-8", "replace")[:300] if isinstance(r.stderr, bytes) else str(r.stderr)[:300]
-        msg = f"edge-tts failed (rc={r.returncode}): {err}"
+        msg = "edge-tts produced empty output"
         logger.warning(msg)
         print(f"GenerateAudio: {msg}")
         return False
-    except subprocess.TimeoutExpired:
+    except asyncio.TimeoutError:
         msg = f"edge-tts timed out for: {text[:60]!r}"
         logger.warning(msg)
         print(f"GenerateAudio: {msg}")
@@ -238,8 +235,7 @@ class GenerateAudio(AsyncNode):
                             "ElevenLabs failed segment %d — fallback to edge-tts", i)
 
                 if not tts_ok:
-                    tts_ok = await asyncio.to_thread(
-                        _edge_tts_cli, narration, raw_path, voice)
+                    tts_ok = await _edge_tts_api(narration, raw_path, voice)
 
                 if tts_ok:
                     pad_ok = await asyncio.to_thread(
