@@ -117,14 +117,19 @@ def _elevenlabs_tts(text: str, out_path: Path, voice_id: str) -> bool:
             if response.status_code == 200:
                 out_path.write_bytes(response.content)
                 return out_path.stat().st_size > 200
-            logger.warning("ElevenLabs API error %d: %s",
-                           response.status_code, response.text[:200])
+            msg = f"ElevenLabs API error {response.status_code}: {response.text[:200]}"
+            logger.warning(msg)
+            print(f"GenerateAudio: {msg}")
             return False
     except ImportError:
-        logger.warning("httpx not installed — cannot use ElevenLabs")
+        msg = "httpx not installed — cannot use ElevenLabs"
+        logger.warning(msg)
+        print(f"GenerateAudio: {msg}")
         return False
     except Exception as exc:
-        logger.warning("ElevenLabs error: %s", exc)
+        msg = f"ElevenLabs error: {exc}"
+        logger.warning(msg)
+        print(f"GenerateAudio: {msg}")
         return False
 
 
@@ -135,16 +140,23 @@ def _edge_tts_cli(text: str, out_path: Path, voice: str) -> bool:
         "--text", text, "--write-media", str(out_path),
     ]
     try:
-        r = subprocess.run(cmd, capture_output=True, timeout=40)
+        r = subprocess.run(cmd, capture_output=True, timeout=60)
         if r.returncode == 0 and out_path.exists() and out_path.stat().st_size > 200:
             return True
-        logger.warning("edge-tts failed (rc=%d): %s", r.returncode, r.stderr[:200])
+        err = r.stderr.decode("utf-8", "replace")[:300] if isinstance(r.stderr, bytes) else str(r.stderr)[:300]
+        msg = f"edge-tts failed (rc={r.returncode}): {err}"
+        logger.warning(msg)
+        print(f"GenerateAudio: {msg}")
         return False
     except subprocess.TimeoutExpired:
-        logger.warning("edge-tts timed out for: %r", text[:60])
+        msg = f"edge-tts timed out for: {text[:60]!r}"
+        logger.warning(msg)
+        print(f"GenerateAudio: {msg}")
         return False
     except Exception as exc:
-        logger.warning("edge-tts error: %s", exc)
+        msg = f"edge-tts error: {exc}"
+        logger.warning(msg)
+        print(f"GenerateAudio: {msg}")
         return False
 
 
